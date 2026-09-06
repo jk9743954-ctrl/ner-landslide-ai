@@ -5,7 +5,6 @@ import {
   EnvironmentalTelemetry,
   EmergencyContact,
   StateSummary,
-  RiskLevel,
 } from '../types/risk';
 
 export const MOCK_MONITORING_ZONES: MonitoringZone[] = [

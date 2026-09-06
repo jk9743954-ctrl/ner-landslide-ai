@@ -80,7 +80,6 @@ export function calculateDynamicRisk(
 } {
   // Demonstration calculation: dynamically scales with rainfall
   const slopeFactor = baseZone.slope / 45; // steeper slope increases impact
-  const baseRainRatio = simulatedRainfallMm / 140;
 
   const dynamicMoisture = Math.min(
     99,

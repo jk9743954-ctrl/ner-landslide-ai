@@ -4,7 +4,7 @@ import { EnvironmentalCharts } from './EnvironmentalCharts';
 import { CitizenReportsList } from './CitizenReportsList';
 import { SimulationOverrideDrawer } from './SimulationOverrideDrawer';
 import { RiskBadge } from '../common/RiskBadge';
-import { ActiveAlert, MonitoringZone } from '../../types/risk';
+import { ActiveAlert, } from '../../types/risk';
 
 export const AuthorityDashboard: React.FC = () => {
   const {
@@ -14,7 +14,6 @@ export const AuthorityDashboard: React.FC = () => {
     activeAlerts,
     citizenReports,
     navigateTo,
-    setShowSafeAreasModal,
   } = useSimulation();
 
   const [filterRisk, setFilterRisk] = useState<string>('ALL');

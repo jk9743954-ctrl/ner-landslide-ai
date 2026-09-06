@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSimulation } from '../../context/SimulationContext';
-import { HazardReport, ReportStatus } from '../../types/risk';
+import {  ReportStatus } from '../../types/risk';
 import { RiskBadge } from '../common/RiskBadge';
 
 export const CitizenReportsList: React.FC = () => {

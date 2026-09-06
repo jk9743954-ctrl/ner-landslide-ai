@@ -80,7 +80,7 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [showSafeAreasModal, setShowSafeAreasModal] = useState<boolean>(false);
 
   // Alerts & Reports
-  const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>(MOCK_ACTIVE_ALERTS);
+  const [activeAlerts] = useState<ActiveAlert[]>(MOCK_ACTIVE_ALERTS);
   const [citizenReports, setCitizenReports] = useState<HazardReport[]>([]);
 
   // Navigation helper
