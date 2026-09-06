@@ -1,0 +1,2428 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>NER LANDSLIDE AI — Early Warning & Risk Monitoring System</title>
+    <meta
+      name="description"
+      content="AI-Based Early Warning & Landslide Risk Monitoring System for North Eastern Region of India (SIH Prototype)"
+    />
+    <meta name="theme-color" content="#0B132B" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.json" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Leaflet CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              brand: {
+                950: '#070D1E',
+                900: '#0B132B',
+                800: '#1C2541',
+                700: '#3A506B',
+                500: '#5BC0BE',
+                400: '#6FFFE9',
+              },
+              risk: {
+                low: '#10B981',
+                moderate: '#F59E0B',
+                high: '#F97316',
+                critical: '#EF4444',
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Custom Essential Styles -->
+    <style>
+      body {
+        background-color: #0B132B;
+        color: #F1F5F9;
+        font-family: 'Inter', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+      }
+      .leaflet-container {
+        font-family: inherit;
+        background: #090e1f;
+      }
+      .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid #334155;
+        border-radius: 12px;
+      }
+      @keyframes pulse-ring {
+        0% { transform: scale(0.9); opacity: 0.8; }
+        50% { transform: scale(1.3); opacity: 0.2; }
+        100% { transform: scale(0.9); opacity: 0.8; }
+      }
+      .pulse-marker {
+        animation: pulse-ring 2s infinite ease-in-out;
+      }
+    </style>
+
+    <!-- Leaflet JS -->
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <!-- React 18 & ReactDOM 18 -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+
+    <!-- Babel Standalone for Client-Side Compilation -->
+    <script src="https://unpkg.com/@babel/standalone@7.24.5/babel.min.js"></script>
+  </head>
+  <body class="overflow-x-hidden min-h-screen bg-[#0B132B]">
+    <!-- React Mount Node -->
+    <div id="root">
+      <!-- Loading Shell -->
+      <div class="flex h-screen w-screen flex-col items-center justify-center bg-[#0B132B] text-slate-100">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <div class="h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <span class="absolute text-2xl">🏔️</span>
+        </div>
+        <h2 class="mt-4 text-lg font-black tracking-tight text-white">NER LANDSLIDE AI</h2>
+        <p class="mt-1 text-xs text-slate-400 font-mono">Initializing Telemetry Node...</p>
+      </div>
+    </div>
+
+    <!-- Register PWA Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((err) => {
+            console.log('SW registration skipped or offline mode:', err);
+          });
+        });
+      }
+    </script>
+
+    <!-- Unified Executable React Application Script -->
+    <script type="text/babel" data-presets="env,react">
+      const { useState, useEffect, useMemo, useRef, useCallback, createContext, useContext } = React;
+
+      // ==========================================
+      // DATA LAYER (8 Northeast Indian States)
+      // ==========================================
+      const MOCK_ZONES = [
+        // Meghalaya
+        {
+          id: 'shillong-04',
+          name: 'Shillong Zone 04 (Barapani - Mawlai Corridor)',
+          code: 'ML-SHL-04',
+          state: 'Meghalaya',
+          district: 'East Khasi Hills',
+          coordinates: [25.5788, 91.8933],
+          elevation: 1496,
+          slope: 38,
+          soilType: 'Residual Sandy-Clay Loam over Sandstone',
+          rainfall24h: 142,
+          soilMoisture: 81,
+          groundDisplacement: 7.2,
+          temperature: 22,
+          riskScore: 78,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'Heavy cumulative monsoon rainfall & toe slope incision',
+          expectedRiskWindow: 'Next 6–12 hours',
+          safeEvacuationAreas: [
+            { name: 'Mawlai Community Disaster Shelter', distance: '1.2 km North', capacity: 450, type: 'Disaster Shelter', contact: '+91-364-2224103' },
+            { name: 'NEHU Indoor Sports Stadium', distance: '2.8 km East', capacity: 1200, type: 'Sports Complex', contact: '+91-364-2721000' }
+          ]
+        },
+        {
+          id: 'sohra-01',
+          name: 'Cherrapunji (Sohra) Escarpment Zone 01',
+          code: 'ML-SOH-01',
+          state: 'Meghalaya',
+          district: 'East Khasi Hills',
+          coordinates: [25.2702, 91.7323],
+          elevation: 1430,
+          slope: 46,
+          soilType: 'Limestone & Weathered Sandstone Joint System',
+          rainfall24h: 215,
+          soilMoisture: 89,
+          groundDisplacement: 14.8,
+          temperature: 19,
+          riskScore: 92,
+          riskLevel: 'CRITICAL',
+          previousRiskLevel: 'HIGH',
+          primaryTrigger: 'Extreme orographic precipitation exceeding pore pressure threshold',
+          expectedRiskWindow: 'Next 2–6 hours (Immediate)',
+          safeEvacuationAreas: [
+            { name: 'Sohra Civil Multi-Purpose Hall', distance: '0.9 km West', capacity: 600, type: 'Community Hall', contact: '+91-363-7262234' }
+          ]
+        },
+        {
+          id: 'tura-03',
+          name: 'Tura Peak Zone 03 (Pelga Falls Ridge)',
+          code: 'ML-TUR-03',
+          state: 'Meghalaya',
+          district: 'West Garo Hills',
+          coordinates: [25.5138, 90.2201],
+          elevation: 872,
+          slope: 34,
+          soilType: 'Precambrian Gneissic Weathered Regolith',
+          rainfall24h: 68,
+          soilMoisture: 58,
+          groundDisplacement: 2.1,
+          temperature: 26,
+          riskScore: 48,
+          riskLevel: 'MODERATE',
+          previousRiskLevel: 'LOW',
+          primaryTrigger: 'Intermittent rainfall saturation',
+          expectedRiskWindow: 'Next 24–48 hours',
+          safeEvacuationAreas: [
+            { name: 'Dakopgre Multi-Purpose Complex', distance: '2.1 km South', capacity: 700, type: 'Disaster Shelter', contact: '+91-365-1223842' }
+          ]
+        },
+        // Assam
+        {
+          id: 'haflong-05',
+          name: 'Dima Hasao (Haflong) Zone 05 (Railway Hill Section)',
+          code: 'AS-DHA-05',
+          state: 'Assam',
+          district: 'Dima Hasao',
+          coordinates: [25.1683, 93.0189],
+          elevation: 680,
+          slope: 44,
+          soilType: 'Disang Shale & Argillaceous Siltstone',
+          rainfall24h: 178,
+          soilMoisture: 88,
+          groundDisplacement: 16.5,
+          temperature: 23,
+          riskScore: 91,
+          riskLevel: 'CRITICAL',
+          previousRiskLevel: 'HIGH',
+          primaryTrigger: 'Severe shale softening and subterranean drainage saturation',
+          expectedRiskWindow: 'Next 3–6 hours (Debris Flow Hazard)',
+          safeEvacuationAreas: [
+            { name: 'Haflong Govt College Ground Shelter', distance: '1.4 km North', capacity: 1000, type: 'School Building', contact: '+91-367-3236245' }
+          ]
+        },
+        {
+          id: 'guwahati-01',
+          name: 'Guwahati Zone 01 (Kamakhya & Sarania Hills)',
+          code: 'AS-GHY-01',
+          state: 'Assam',
+          district: 'Kamrup Metropolitan',
+          coordinates: [26.1664, 91.7088],
+          elevation: 215,
+          slope: 35,
+          soilType: 'Porphyritic Granite Saprolite Layer',
+          rainfall24h: 94,
+          soilMoisture: 69,
+          groundDisplacement: 4.8,
+          temperature: 29,
+          riskScore: 68,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'Urban cut-slope instability coupled with heavy runoff',
+          expectedRiskWindow: 'Next 12–24 hours',
+          safeEvacuationAreas: [
+            { name: 'Maligaon Railway Community Hall', distance: '1.1 km South', capacity: 800, type: 'Community Hall', contact: '+91-361-2670222' }
+          ]
+        },
+        // Sikkim
+        {
+          id: 'gangtok-07',
+          name: 'Gangtok Zone 07 (Burtuk & Development Area)',
+          code: 'SK-GTK-07',
+          state: 'Sikkim',
+          district: 'Gangtok',
+          coordinates: [27.3389, 88.6065],
+          elevation: 1650,
+          slope: 42,
+          soilType: 'Daling Group Phyllite and Schist',
+          rainfall24h: 156,
+          soilMoisture: 84,
+          groundDisplacement: 11.2,
+          temperature: 17,
+          riskScore: 86,
+          riskLevel: 'CRITICAL',
+          previousRiskLevel: 'HIGH',
+          primaryTrigger: 'Subsurface water table rise in fragile phyllitic bedrock',
+          expectedRiskWindow: 'Next 4–8 hours',
+          safeEvacuationAreas: [
+            { name: 'Paljor Stadium Indoor Complex', distance: '1.6 km SW', capacity: 1800, type: 'Sports Complex', contact: '+91-359-2202723' }
+          ]
+        },
+        {
+          id: 'mangan-04',
+          name: 'Mangan Slide Zone 04 (North Sikkim Highway)',
+          code: 'SK-MAN-04',
+          state: 'Sikkim',
+          district: 'Mangan',
+          coordinates: [27.5097, 88.5283],
+          elevation: 1310,
+          slope: 52,
+          soilType: 'Chungthang Gneiss and Highly Sheared Mica Schist',
+          rainfall24h: 184,
+          soilMoisture: 87,
+          groundDisplacement: 15.1,
+          temperature: 15,
+          riskScore: 94,
+          riskLevel: 'CRITICAL',
+          previousRiskLevel: 'CRITICAL',
+          primaryTrigger: 'Active translational debris slide on arterial supply route',
+          expectedRiskWindow: 'Immediate (Active Blockage)',
+          safeEvacuationAreas: [
+            { name: 'Mangan Administrative Center Hall', distance: '1.0 km East', capacity: 500, type: 'Community Hall', contact: '+91-359-2234234' }
+          ]
+        },
+        // Manipur
+        {
+          id: 'noney-03',
+          name: 'Noney Zone 03 (Tupul Railway Bridge Flank)',
+          code: 'MN-NNY-03',
+          state: 'Manipur',
+          district: 'Noney',
+          coordinates: [24.7700, 93.6800],
+          elevation: 480,
+          slope: 49,
+          soilType: 'Highly Deformed Cretaceous Shale & Mudstone',
+          rainfall24h: 195,
+          soilMoisture: 91,
+          groundDisplacement: 18.3,
+          temperature: 24,
+          riskScore: 96,
+          riskLevel: 'CRITICAL',
+          previousRiskLevel: 'HIGH',
+          primaryTrigger: 'Massive slope saturation, river constriction, and retrogressive slump',
+          expectedRiskWindow: 'Immediate (Severe Infrastructure Threat)',
+          safeEvacuationAreas: [
+            { name: 'Noney District HQ Emergency Shelter', distance: '3.0 km SW', capacity: 800, type: 'Disaster Shelter', contact: '+91-387-4222100' }
+          ]
+        },
+        // Mizoram
+        {
+          id: 'aizawl-02',
+          name: 'Aizawl Zone 02 (Laipuitlang - Chite Valley Slope)',
+          code: 'MZ-AZL-02',
+          state: 'Mizoram',
+          district: 'Aizawl',
+          coordinates: [23.7271, 92.7176],
+          elevation: 1132,
+          slope: 45,
+          soilType: 'Surma Group Siltstone and Fractured Sandstone',
+          rainfall24h: 128,
+          soilMoisture: 77,
+          groundDisplacement: 7.8,
+          temperature: 23,
+          riskScore: 82,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'Steep synclinal valley morphology & heavy surcharge',
+          expectedRiskWindow: 'Next 6–14 hours',
+          safeEvacuationAreas: [
+            { name: 'Hawla Indoor Stadium Shelter', distance: '1.5 km West', capacity: 900, type: 'Sports Complex', contact: '+91-389-2334812' }
+          ]
+        },
+        // Arunachal Pradesh
+        {
+          id: 'itanagar-01',
+          name: 'Itanagar Zone 01 (Ganga Lake / Chimpu Slopes)',
+          code: 'AR-ITA-01',
+          state: 'Arunachal Pradesh',
+          district: 'Papum Pare',
+          coordinates: [27.0844, 93.6053],
+          elevation: 440,
+          slope: 41,
+          soilType: 'Siwalik Formation Friable Sandstone',
+          rainfall24h: 135,
+          soilMoisture: 79,
+          groundDisplacement: 6.9,
+          temperature: 24,
+          riskScore: 76,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'Stream toe erosion & severe slope surcharge',
+          expectedRiskWindow: 'Next 8–16 hours',
+          safeEvacuationAreas: [
+            { name: 'Indira Gandhi Park Staging Point', distance: '1.8 km NE', capacity: 2000, type: 'Sports Complex', contact: '+91-360-2212343' }
+          ]
+        },
+        {
+          id: 'tawang-02',
+          name: 'Tawang Sela Corridor Zone 02 (Baisakhi Slopes)',
+          code: 'AR-TAW-02',
+          state: 'Arunachal Pradesh',
+          district: 'Tawang',
+          coordinates: [27.5861, 91.8594],
+          elevation: 3120,
+          slope: 48,
+          soilType: 'Glacial Till & Fractured Gneiss Beds',
+          rainfall24h: 88,
+          soilMoisture: 72,
+          groundDisplacement: 8.4,
+          temperature: 9,
+          riskScore: 74,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'HIGH',
+          primaryTrigger: 'Freeze-thaw wedge action and concentrated surface runoff',
+          expectedRiskWindow: 'Next 6–18 hours',
+          safeEvacuationAreas: [
+            { name: 'Tawang Army Transit Evacuation Camp', distance: '3.2 km South', capacity: 650, type: 'Disaster Shelter', contact: '+91-379-4222221' }
+          ]
+        },
+        // Nagaland
+        {
+          id: 'kohima-03',
+          name: 'Kohima Zone 03 (Dzüko Approach / Kisama Slope)',
+          code: 'NL-KOH-03',
+          state: 'Nagaland',
+          district: 'Kohima',
+          coordinates: [25.6751, 94.1086],
+          elevation: 1444,
+          slope: 40,
+          soilType: 'Disang Group Weathered Splintery Shale',
+          rainfall24h: 118,
+          soilMoisture: 75,
+          groundDisplacement: 6.4,
+          temperature: 20,
+          riskScore: 75,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'Deep-seated planar slide in fissile shale beds',
+          expectedRiskWindow: 'Next 8–18 hours',
+          safeEvacuationAreas: [
+            { name: 'Indira Gandhi Stadium Kohima Base', distance: '2.6 km North', capacity: 1600, type: 'Sports Complex', contact: '+91-370-2270033' }
+          ]
+        },
+        // Tripura
+        {
+          id: 'jampui-01',
+          name: 'Jampui Hills Zone 01 (Vanghmun - Kanchanpur Road)',
+          code: 'TR-JAM-01',
+          state: 'Tripura',
+          district: 'North Tripura',
+          coordinates: [23.9000, 92.2667],
+          elevation: 930,
+          slope: 37,
+          soilType: 'Tipam Group Ferruginous Sandstone & Red Earth',
+          rainfall24h: 110,
+          soilMoisture: 73,
+          groundDisplacement: 5.5,
+          temperature: 25,
+          riskScore: 71,
+          riskLevel: 'HIGH',
+          previousRiskLevel: 'MODERATE',
+          primaryTrigger: 'High intensity precipitation along anticlinal ridge road cuts',
+          expectedRiskWindow: 'Next 10–20 hours',
+          safeEvacuationAreas: [
+            { name: 'Vanghmun Community Resource Centre', distance: '0.6 km South', capacity: 400, type: 'Community Hall', contact: '+91-382-4235210' }
+          ]
+        }
+      ];
+
+      const MOCK_ALERTS = [
+        {
+          id: 'alt-001',
+          zoneId: 'noney-03',
+          zoneName: 'Noney Zone 03 (Tupul Flank)',
+          state: 'Manipur',
+          riskLevel: 'CRITICAL',
+          headline: '🔴 CRITICAL: Extreme Debris Slide Likelihood at Tupul Flank',
+          description: 'Cumulative 24h rainfall reached 195mm with 18.3mm borehole inclinometer movement. Immediate evacuation advised.',
+          issuedAt: '25 mins ago',
+          affectedPopulation: 3400
+        },
+        {
+          id: 'alt-002',
+          zoneId: 'sohra-01',
+          zoneName: 'Cherrapunji (Sohra) Escarpment Zone 01',
+          state: 'Meghalaya',
+          riskLevel: 'CRITICAL',
+          headline: '🔴 CRITICAL: Escarpment Failure Imminent along Sohra-Shella Route',
+          description: 'Soil saturation at 89% with intense orographic cloudburst. Road vehicular movement suspended.',
+          issuedAt: '40 mins ago',
+          affectedPopulation: 2200
+        },
+        {
+          id: 'alt-003',
+          zoneId: 'haflong-05',
+          zoneName: 'Haflong Zone 05 (Railway Hill Section)',
+          state: 'Assam',
+          riskLevel: 'CRITICAL',
+          headline: '🔴 CRITICAL: Rapid Shale Liquefaction on Lumding-Badarpur Track',
+          description: 'Subterranean pore pressure sensors crossed danger limits. NF Railway notified of active mudflow risk.',
+          issuedAt: '1 hour ago',
+          affectedPopulation: 4100
+        },
+        {
+          id: 'alt-004',
+          zoneId: 'shillong-04',
+          zoneName: 'Shillong Zone 04 (Barapani - Mawlai Corridor)',
+          state: 'Meghalaya',
+          riskLevel: 'HIGH',
+          headline: '🟠 HIGH: Slope Instability Detected on NH-6 Barapani Corridor',
+          description: 'Rainfall crossed 142mm. Inclinometer reading 7.2mm movement. Commuters and vulnerable residences on alert.',
+          issuedAt: '1 hour 20 mins ago',
+          affectedPopulation: 8500
+        },
+        {
+          id: 'alt-005',
+          zoneId: 'aizawl-02',
+          zoneName: 'Aizawl Zone 02 (Laipuitlang - Chite Valley)',
+          state: 'Mizoram',
+          riskLevel: 'HIGH',
+          headline: '🟠 HIGH: Structural Cracks and Surface Creep in Chite Valley',
+          description: 'Steep slope surcharge coupled with continuous rainfall. Local disaster task force deployed.',
+          issuedAt: '2 hours ago',
+          affectedPopulation: 5800
+        }
+      ];
+
+      const INITIAL_REPORTS = [
+        {
+          id: 'rep-101',
+          timestamp: '12 mins ago',
+          hazardType: 'Road Crack',
+          locationName: 'Upper Shillong Peak Road (near 7th Mile)',
+          description: 'Noticed 4-inch wide longitudinal cracks opening along the downhill asphalt shoulder after heavy morning downpour. Water seeping into fracture.',
+          reporterName: 'Banrap Lyngdoh',
+          status: 'Under Review',
+          aiAssessment: 'Nascent slope crest detachment. Matches 142mm rainfall threshold.',
+          severity: 'HIGH'
+        },
+        {
+          id: 'rep-102',
+          timestamp: '28 mins ago',
+          hazardType: 'Rockfall',
+          locationName: 'Haflong - Jatinga Hill Cut KM-42',
+          description: 'Several boulders rolled down onto left lane blocking light traffic. Scree net looks partially torn.',
+          reporterName: 'Anupam Das',
+          status: 'Verified',
+          aiAssessment: 'Active wedge detachment confirmed. Secondary debris cascade risk elevated.',
+          severity: 'CRITICAL'
+        },
+        {
+          id: 'rep-103',
+          timestamp: '1 hour ago',
+          hazardType: 'Mudflow',
+          locationName: 'Aizawl Chite Veng Slopes',
+          description: 'Liquid brown mud and fine gravel washing over retaining wall into residential drainage canal.',
+          reporterName: 'Lalremruata Sailo',
+          status: 'Under Review',
+          aiAssessment: 'Superficial regolith liquefaction; weep hole blockage risk.',
+          severity: 'MODERATE'
+        }
+      ];
+
+      const STATE_SUMMARIES = [
+        { state: 'Meghalaya', totalZones: 11, critical: 2, high: 4, peakRisk: 92, alert: 'Cherrapunji & Barapani rain saturation' },
+        { state: 'Assam', totalZones: 9, critical: 1, high: 2, peakRisk: 91, alert: 'Haflong railway cutting instability' },
+        { state: 'Sikkim', totalZones: 8, critical: 2, high: 3, peakRisk: 94, alert: 'Mangan & Burtuk ground movement' },
+        { state: 'Manipur', totalZones: 8, critical: 1, high: 2, peakRisk: 96, alert: 'Noney Tupul corridor severe debris threat' },
+        { state: 'Mizoram', totalZones: 7, critical: 0, high: 3, peakRisk: 82, alert: 'Aizawl synclinal valley urban creep' },
+        { state: 'Arunachal Pradesh', totalZones: 10, critical: 0, high: 3, peakRisk: 76, alert: 'Itanagar & Tawang high precipitation passes' },
+        { state: 'Nagaland', totalZones: 8, critical: 0, high: 2, peakRisk: 75, alert: 'Kohima fissile shale destabilization' },
+        { state: 'Tripura', totalZones: 6, critical: 0, high: 1, peakRisk: 71, alert: 'Jampui Hills ridge road cut saturation' }
+      ];
+
+      const EMERGENCY_CONTACTS = [
+        { state: 'National Level', authority: 'NDRF HQ Control Room', helpline: '1078', alt: '011-24363260' },
+        { state: 'Meghalaya', authority: 'State Disaster Management Authority (SDMA)', helpline: '1070 / 1077', alt: '+91-364-2502188' },
+        { state: 'Assam', authority: 'Assam State Disaster Management Authority (ASDMA)', helpline: '1070 / 1079', alt: '+91-361-2237221' },
+        { state: 'Sikkim', authority: 'Sikkim State Disaster Management Authority (SSDMA)', helpline: '1070 / 1077', alt: '+91-359-2201145' },
+        { state: 'Manipur', authority: 'Manipur SDMA Imphal', helpline: '1070', alt: '+91-385-2443441' },
+        { state: 'Mizoram', authority: 'Disaster Management & Rehabilitation Aizawl', helpline: '1070 / 112', alt: '+91-389-2334812' },
+        { state: 'Nagaland', authority: 'Nagaland SDMA Kohima', helpline: '1070 / 112', alt: '+91-370-2270050' },
+        { state: 'Arunachal Pradesh', authority: 'Dept of Disaster Management Itanagar', helpline: '1070 / 112', alt: '+91-360-2212268' },
+        { state: 'Tripura', authority: 'State Emergency Operation Centre Agartala', helpline: '1070', alt: '+91-381-2416045' }
+      ];
+
+      // ==========================================
+      // SIMULATION CONTEXT & DYNAMIC MATH
+      // ==========================================
+      const SimulationContext = createContext(null);
+
+      function calculateDynamicRisk(baseZone, rainMm) {
+        const slopeFactor = baseZone.slope / 45;
+        const dynamicMoisture = Math.min(99, Math.max(25, Math.round(35 + (rainMm / 200) * 58 * (1 + slopeFactor * 0.1))));
+        const dynamicDisplacement = parseFloat(Math.max(0.5, (0.8 + Math.pow(rainMm / 40, 2) * 0.9 * slopeFactor)).toFixed(1));
+        
+        let score = Math.round(rainMm * 0.35 * slopeFactor + dynamicMoisture * 0.4 + dynamicDisplacement * 1.5);
+        score = Math.min(100, Math.max(15, score));
+
+        let level = 'LOW';
+        if (score >= 85) level = 'CRITICAL';
+        else if (score >= 65) level = 'HIGH';
+        else if (score >= 35) level = 'MODERATE';
+
+        let trigger = 'Baseline environmental metrics within seasonal threshold';
+        if (level === 'CRITICAL') trigger = `Extreme rainfall saturation (${rainMm}mm) exceeding critical pore pressure limit on ${baseZone.slope}° slope`;
+        else if (level === 'HIGH') trigger = `Heavy cumulative rainfall (${rainMm}mm) and accelerated ground creep (${dynamicDisplacement}mm)`;
+        else if (level === 'MODERATE') trigger = `Moderate rainfall (${rainMm}mm) with rising soil water saturation`;
+
+        return { riskScore: score, riskLevel: level, soilMoisture: dynamicMoisture, groundDisplacement: dynamicDisplacement, primaryTrigger: trigger };
+      }
+
+      function SimulationProvider({ children }) {
+        const [currentRoute, setCurrentRoute] = useState(window.location.hash.replace('#', '') || '/');
+        const [activeZone, setActiveZone] = useState(MOCK_ZONES[0]);
+        const [simulatedRainfall, setSimulatedRainfall] = useState(142);
+        const [userCoords, setUserCoords] = useState(null);
+        const [locationStatus, setLocationStatus] = useState('idle');
+        const [locationMessage, setLocationMessage] = useState('Default demo location: Shillong Zone 04 (Meghalaya)');
+        const [isEscalating, setIsEscalating] = useState(false);
+        const [escalationStep, setEscalationStep] = useState('');
+        const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+        const [showSafeAreasModal, setShowSafeAreasModal] = useState(false);
+        const [citizenReports, setCitizenReports] = useState(() => {
+          try {
+            const saved = localStorage.getItem('ner_citizen_reports');
+            if (saved) return [...JSON.parse(saved), ...INITIAL_REPORTS];
+          } catch(e){}
+          return INITIAL_REPORTS;
+        });
+
+        const navigateTo = useCallback((route) => {
+          setCurrentRoute(route);
+          window.location.hash = route;
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, []);
+
+        useEffect(() => {
+          const onHashChange = () => setCurrentRoute(window.location.hash.replace('#', '') || '/');
+          window.addEventListener('hashchange', onHashChange);
+          return () => window.removeEventListener('hashchange', onHashChange);
+        }, []);
+
+        const dynamicMetrics = useMemo(() => {
+          return calculateDynamicRisk(activeZone, simulatedRainfall);
+        }, [activeZone, simulatedRainfall]);
+
+        const playAlertTone = useCallback((isCritical) => {
+          try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = isCritical ? 'sawtooth' : 'sine';
+            osc.frequency.setValueAtTime(isCritical ? 880 : 440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(isCritical ? 440 : 220, ctx.currentTime + 0.4);
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.4);
+          } catch(e){}
+        }, []);
+
+        const requestUserLocation = useCallback(() => {
+          setLocationStatus('loading');
+          setLocationMessage('Requesting GPS location...');
+
+          if (!navigator.geolocation) {
+            setLocationStatus('denied');
+            setLocationMessage('Geolocation unavailable. Using demo location: Shillong Zone 04.');
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              setUserCoords([lat, lng]);
+              setLocationStatus('granted');
+              setLocationMessage(`GPS Active: ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E (Matched nearest demo zone: Shillong Zone 04)`);
+              setActiveZone(MOCK_ZONES[0]);
+              setSimulatedRainfall(MOCK_ZONES[0].rainfall24h);
+            },
+            () => {
+              setLocationStatus('denied');
+              setLocationMessage('GPS permission denied. Gracefully using demo location: Shillong Zone 04 (Meghalaya).');
+              setActiveZone(MOCK_ZONES[0]);
+            },
+            { timeout: 8000 }
+          );
+        }, []);
+
+        const runEscalationDemo = useCallback(() => {
+          if (isEscalating) return;
+          setIsEscalating(true);
+          setEscalationStep('Initializing Demo Simulation: 40mm Rainfall (LOW Risk)...');
+          setSimulatedRainfall(40);
+
+          const t1 = setTimeout(() => {
+            setSimulatedRainfall(80);
+            setEscalationStep('Escalating: 80mm Rainfall (MODERATE Risk)...');
+            playAlertTone(false);
+          }, 3000);
+
+          const t2 = setTimeout(() => {
+            setSimulatedRainfall(125);
+            setEscalationStep('Warning Alert: 125mm Rainfall (HIGH Risk)...');
+            playAlertTone(false);
+          }, 6500);
+
+          const t3 = setTimeout(() => {
+            setSimulatedRainfall(180);
+            setEscalationStep('CRITICAL THRESHOLD: 180mm Rain (CRITICAL Hazard Level)!');
+            playAlertTone(true);
+            setShowEmergencyModal(true);
+            setIsEscalating(false);
+          }, 10500);
+
+          return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+          };
+        }, [isEscalating, playAlertTone]);
+
+        const submitReport = useCallback(async (report) => {
+          let aiNote = 'Automated assessment: Potential slope failure detected. Verified against regional rainfall thresholds.';
+          if (report.hazardType === 'Road Crack') aiNote = 'Longitudinal tension crack pattern indicates nascent slope crest detachment.';
+          else if (report.hazardType === 'Landslide') aiNote = 'Active mass wasting reported. Immediate barrier dispatch recommended.';
+
+          const newRep = {
+            ...report,
+            id: `rep-${Date.now().toString().slice(-4)}`,
+            timestamp: 'Just now',
+            status: 'New',
+            aiAssessment: aiNote
+          };
+
+          setCitizenReports((prev) => {
+            const next = [newRep, ...prev];
+            try {
+              localStorage.setItem('ner_citizen_reports', JSON.stringify([newRep]));
+            } catch(e){}
+            return next;
+          });
+          return newRep;
+        }, []);
+
+        const updateReportStatus = useCallback((repId, status) => {
+          setCitizenReports((prev) =>
+            prev.map((r) => (r.id === repId ? { ...r, status } : r))
+          );
+        }, []);
+
+        return (
+          <SimulationContext.Provider
+            value={{
+              currentRoute,
+              navigateTo,
+              allZones: MOCK_ZONES,
+              activeZone,
+              setActiveZone,
+              simulatedRainfall,
+              setSimulatedRainfall,
+              dynamicRiskScore: dynamicMetrics.riskScore,
+              dynamicRiskLevel: dynamicMetrics.riskLevel,
+              dynamicSoilMoisture: dynamicMetrics.soilMoisture,
+              dynamicGroundDisplacement: dynamicMetrics.groundDisplacement,
+              dynamicTrigger: dynamicMetrics.primaryTrigger,
+              userCoords,
+              locationStatus,
+              locationMessage,
+              requestUserLocation,
+              isEscalating,
+              escalationStep,
+              runEscalationDemo,
+              stopEscalationDemo: () => setIsEscalating(false),
+              showEmergencyModal,
+              setShowEmergencyModal,
+              showSafeAreasModal,
+              setShowSafeAreasModal,
+              activeAlerts: MOCK_ALERTS,
+              citizenReports,
+              submitReport,
+              updateReportStatus
+            }}
+          >
+            {children}
+          </SimulationContext.Provider>
+        );
+      }
+
+      function useSimulation() {
+        return useContext(SimulationContext);
+      }
+
+      // ==========================================
+      // COMMON COMPONENTS (Badge, Header, Nav, Banner)
+      // ==========================================
+      function RiskBadge({ level, size = 'md', showPulse = false }) {
+        const config = {
+          CRITICAL: { bg: 'bg-red-950/90 border-red-500 text-red-200', dot: 'bg-red-500' },
+          HIGH: { bg: 'bg-orange-950/90 border-orange-500 text-orange-200', dot: 'bg-orange-500' },
+          MODERATE: { bg: 'bg-amber-950/90 border-amber-500 text-amber-200', dot: 'bg-amber-400' },
+          LOW: { bg: 'bg-emerald-950/90 border-emerald-500 text-emerald-200', dot: 'bg-emerald-400' },
+        }[level] || { bg: 'bg-slate-900 border-slate-700 text-slate-300', dot: 'bg-slate-400' };
+
+        const sz = {
+          sm: 'text-[10px] px-2 py-0.5 space-x-1 font-bold',
+          md: 'text-xs px-2.5 py-1 space-x-1.5 font-bold',
+          lg: 'text-sm px-3.5 py-1.5 space-x-2 font-black',
+        }[size];
+
+        return (
+          <span className={`inline-flex items-center rounded-full border shadow-sm ${config.bg} ${sz}`}>
+            <span className="relative flex h-2 w-2 items-center justify-center">
+              {showPulse && (level === 'CRITICAL' || level === 'HIGH') && (
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${config.dot}`} />
+              )}
+              <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${config.dot}`} />
+            </span>
+            <span>{level}</span>
+          </span>
+        );
+      }
+
+      function Header() {
+        const { currentRoute, navigateTo, dynamicRiskLevel } = useSimulation();
+        const [timeStr, setTimeStr] = useState('');
+
+        useEffect(() => {
+          const update = () => {
+            const now = new Date();
+            setTimeStr(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) + ' IST');
+          };
+          update();
+          const t = setInterval(update, 1000);
+          return () => clearInterval(t);
+        }, []);
+
+        const navLinks = [
+          { label: 'Home', route: '/' },
+          { label: 'Risk Monitoring', route: '/dashboard' },
+          { label: 'Risk Map', route: '/map' },
+          { label: 'AI Assistant', route: '/ai-assistant' },
+          { label: 'Reports', route: '/report' },
+          { label: 'Authority Dashboard', route: '/authority' },
+          { label: 'Safety', route: '/safety' },
+        ];
+
+        return (
+          <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-[#0B132B]/95 backdrop-blur-md">
+            <div className="bg-slate-900/90 px-3 py-1 text-[11px] text-slate-300 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-mono font-medium text-slate-300">NODE: NER-OPS-01</span>
+                <span className="hidden sm:inline text-slate-500">•</span>
+                <span className="hidden sm:inline text-slate-400">Northeast Landslide Early Warning Network (8 States)</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className="font-mono text-slate-400 text-[10px] hidden md:inline">{timeStr}</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 tracking-wider">
+                  DEMO SIMULATION
+                </span>
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+              <div className="flex h-16 items-center justify-between">
+                <div onClick={() => navigateTo('/')} className="flex items-center space-x-3 cursor-pointer group">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md border border-blue-400/30 text-white font-bold text-xl group-hover:scale-105 transition-transform">
+                    🏔️
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-base sm:text-lg font-black tracking-tight text-white">NER LANDSLIDE AI</span>
+                      <span className="inline-flex items-center rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-extrabold text-red-300">
+                        PROTOTYPE • DEMO DATA
+                      </span>
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-slate-400 font-medium hidden xs:block">
+                      AI-Powered Early Warning & Risk Monitoring
+                    </p>
+                  </div>
+                </div>
+
+                <nav className="hidden lg:flex items-center space-x-1">
+                  {navLinks.map((link) => (
+                    <button
+                      key={link.route}
+                      onClick={() => navigateTo(link.route)}
+                      className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${
+                        currentRoute === link.route
+                          ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50 shadow-sm'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+                </nav>
+
+                <div className="flex items-center space-x-2">
+                  {(dynamicRiskLevel === 'CRITICAL' || dynamicRiskLevel === 'HIGH') && (
+                    <button
+                      onClick={() => navigateTo('/dashboard')}
+                      className="animate-pulse flex items-center space-x-1 px-2.5 py-1 rounded-full bg-red-600/30 border border-red-500 text-red-200 text-xs font-bold"
+                    >
+                      <span>⚠️</span>
+                      <span className="hidden sm:inline">ELEVATED RISK</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigateTo('/authority')}
+                    className="hidden sm:inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold"
+                  >
+                    <span>🏛️ Control Room</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+        );
+      }
+
+      function Navigation() {
+        const { currentRoute, navigateTo, dynamicRiskLevel } = useSimulation();
+        const items = [
+          { label: 'Home', route: '/', icon: '🏠' },
+          { label: 'Risk', route: '/dashboard', icon: '📊', badge: dynamicRiskLevel === 'CRITICAL' || dynamicRiskLevel === 'HIGH' },
+          { label: 'Map', route: '/map', icon: '🗺️' },
+          { label: 'AI', route: '/ai-assistant', icon: '🤖' },
+          { label: 'Report', route: '/report', icon: '🚨' },
+        ];
+
+        return (
+          <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-800 bg-[#0B132B]/95 backdrop-blur-lg lg:hidden pb-safe">
+            <div className="flex h-16 items-center justify-around px-2 max-w-lg mx-auto">
+              {items.map((item) => {
+                const isActive = currentRoute === item.route;
+                return (
+                  <button
+                    key={item.route}
+                    onClick={() => navigateTo(item.route)}
+                    className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 text-xs transition-all ${
+                      isActive ? 'text-blue-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-lg relative">
+                      {item.icon}
+                      {item.badge && <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500 animate-ping" />}
+                    </span>
+                    <span className="mt-0.5 text-[11px]">{item.label}</span>
+                    {isActive && <span className="absolute bottom-1 w-6 h-0.5 bg-blue-500 rounded-full" />}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        );
+      }
+
+      function EmergencyBanner() {
+        const {
+          dynamicRiskLevel,
+          activeZone,
+          simulatedRainfall,
+          navigateTo,
+          showEmergencyModal,
+          setShowEmergencyModal,
+          showSafeAreasModal,
+          setShowSafeAreasModal,
+        } = useSimulation();
+
+        const isCritical = dynamicRiskLevel === 'CRITICAL';
+        const isHigh = dynamicRiskLevel === 'HIGH';
+
+        if (!isCritical && !isHigh && !showEmergencyModal) return null;
+
+        return (
+          <React.Fragment>
+            <div className={`w-full border-b transition-all duration-300 ${isCritical ? 'bg-red-950/90 border-red-600 text-red-100' : 'bg-orange-950/90 border-orange-600 text-orange-100'}`}>
+              <div className="mx-auto max-w-7xl px-3 py-2.5 sm:px-6 lg:px-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-start sm:items-center space-x-2.5">
+                    <span className="text-xl sm:text-2xl animate-bounce">⚠️</span>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-extrabold uppercase text-xs sm:text-sm tracking-wider">
+                          {isCritical ? '🚨 CRITICAL LANDSLIDE RISK ALERT' : '⚠️ ELEVATED LANDSLIDE RISK ALERT'}
+                        </span>
+                        <RiskBadge level={dynamicRiskLevel} size="sm" showPulse />
+                      </div>
+                      <p className="text-xs text-slate-200 mt-0.5">
+                        High landslide risk detected in <span className="font-semibold text-white underline">{activeZone.name}</span>.
+                        Heavy rainfall ({simulatedRainfall} mm) and elevated slope instability indicators have increased the current risk level.
+                        Follow instructions from local disaster-management authorities.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+                    <button
+                      onClick={() => setShowSafeAreasModal(true)}
+                      className="px-3 py-1 text-xs font-bold rounded bg-slate-900/80 hover:bg-slate-900 text-white border border-slate-700 shadow-sm"
+                    >
+                      Safe Shelters
+                    </button>
+                    <button
+                      onClick={() => navigateTo('/safety')}
+                      className={`px-3 py-1 text-xs font-bold rounded text-white ${isCritical ? 'bg-red-600 hover:bg-red-500' : 'bg-orange-600 hover:bg-orange-500'}`}
+                    >
+                      Safety Guide
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Modal on Escalation Trigger */}
+            {showEmergencyModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="w-full max-w-md rounded-2xl bg-slate-900 border-2 border-red-600 shadow-2xl p-6 text-white text-left">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-600/20 text-red-400 text-2xl border border-red-500/50">
+                      🚨
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black tracking-tight text-red-400">CRITICAL HAZARD WARNING</h3>
+                      <p className="text-xs text-slate-400">Simulated Early Warning Notification</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-red-950/40 border border-red-800 p-3.5 mb-4 text-xs space-y-2 text-slate-200">
+                    <p className="font-semibold text-white">Zone: <span className="text-red-300">{activeZone.name}</span></p>
+                    <p>
+                      Precipitation reached <span className="font-bold text-red-300">{simulatedRainfall} mm</span>.
+                      Subterranean pore-water saturation exceeded critical slope stability threshold.
+                    </p>
+                    <p className="text-[10px] text-amber-300 font-mono">
+                      * Simulated demonstration trigger for SIH jury presentation.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-300 mb-6">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span>Avoid cutting faces and steep valley gullies</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span>Assemble emergency kits with torches & battery radios</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span>Follow instructions from local disaster-management authorities</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <button
+                      onClick={() => { setShowEmergencyModal(false); setShowSafeAreasModal(true); }}
+                      className="w-full py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 font-bold text-xs shadow-lg text-white"
+                    >
+                      View Safe Shelters
+                    </button>
+                    <button
+                      onClick={() => setShowEmergencyModal(false)}
+                      className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs"
+                    >
+                      Acknowledge Warning
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Safe Areas Modal */}
+            {showSafeAreasModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                <div className="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-6 text-white text-left max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <span>🏛️</span> Designated Safe Evacuation Shelters
+                      </h3>
+                      <p className="text-xs text-slate-400">Assigned assembly centers for {activeZone.name.split(' (')[0]}</p>
+                    </div>
+                    <button
+                      onClick={() => setShowSafeAreasModal(false)}
+                      className="h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 mb-6">
+                    {activeZone.safeEvacuationAreas.map((sh, idx) => (
+                      <div key={idx} className="rounded-xl bg-slate-800/80 border border-slate-700 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-sm text-blue-300">{sh.name}</span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-900/60 text-blue-200 border border-blue-700/50">
+                              {sh.type}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1">
+                            Distance: <span className="font-semibold text-emerald-400">{sh.distance}</span> • Capacity: <span className="font-semibold text-white">{sh.capacity} persons</span>
+                          </p>
+                        </div>
+                        <a
+                          href={`tel:${sh.contact}`}
+                          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 text-xs font-semibold shrink-0"
+                        >
+                          📞 {sh.contact}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="rounded-xl bg-blue-950/40 border border-blue-800/40 p-3 text-xs text-slate-300 mb-4">
+                    <p className="font-semibold text-blue-300 mb-1">Evacuation Route Protocol:</p>
+                    <p>Stick strictly to ridge routes and designated paved collector roads. Avoid shortcuts through gullies or stream channels during peak rainfall.</p>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => setShowSafeAreasModal(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      }
+
+      // ==========================================
+      // 1. LANDING PAGE
+      // ==========================================
+      function LandingPage() {
+        const { navigateTo, allZones, activeAlerts } = useSimulation();
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-20 bg-gradient-to-b from-[#0B132B] via-[#101B39] to-[#0B132B] text-slate-100">
+            <section className="relative overflow-hidden pt-8 pb-12 sm:pt-16 sm:pb-20 border-b border-slate-800">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 text-center max-w-3xl mx-auto">
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/40 bg-blue-950/60 px-3 py-1 mb-6 text-xs text-blue-300 shadow-inner">
+                  <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping"></span>
+                  <span className="font-semibold">SMART INDIA HACKATHON PROTOTYPE</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="font-bold text-amber-400">DEMO TELEMETRY</span>
+                </div>
+
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+                  Know the Risk <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-indigo-400">
+                    Before the Slope Moves.
+                  </span>
+                </h1>
+
+                <p className="mt-5 text-sm sm:text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                  Monitor environmental conditions, identify high-risk zones and receive location-based early warnings
+                  for landslide-prone areas across Northeast India.
+                </p>
+
+                <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+                  <button
+                    onClick={() => navigateTo('/dashboard')}
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm md:text-base shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2.5 transition-all"
+                  >
+                    <span>📍 Check My Risk</span>
+                  </button>
+                  <button
+                    onClick={() => navigateTo('/map')}
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-sm md:text-base shadow-md flex items-center justify-center gap-2.5 transition-all"
+                  >
+                    <span>🗺️ View Risk Map</span>
+                  </button>
+                  <button
+                    onClick={() => navigateTo('/ai-assistant')}
+                    className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-200 border border-indigo-700/50 text-sm font-semibold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <span>🤖 Ask NER AI</span>
+                  </button>
+                </div>
+
+                <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                  <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-400 block uppercase">Monitored Zones</span>
+                    <span className="text-xl sm:text-2xl font-black text-white">{allZones.length} Nodes</span>
+                    <span className="text-[10px] text-emerald-400 block mt-0.5">8 States Covered</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-400 block uppercase">Critical Zones</span>
+                    <span className="text-xl sm:text-2xl font-black text-red-400">
+                      {allZones.filter((z) => z.riskLevel === 'CRITICAL').length}
+                    </span>
+                    <span className="text-[10px] text-red-300 block mt-0.5">High Probability</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-400 block uppercase">Active Alerts</span>
+                    <span className="text-xl sm:text-2xl font-black text-amber-400">{activeAlerts.length} Active</span>
+                    <span className="text-[10px] text-amber-300 block mt-0.5">Disaster Protocol</span>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-400 block uppercase">Lead Time Window</span>
+                    <span className="text-xl sm:text-2xl font-black text-blue-400">6–12 Hours</span>
+                    <span className="text-[10px] text-blue-300 block mt-0.5">Early Evacuation</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 8 States Grid */}
+            <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-2">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                    <span>⛰️</span> Northeast India Risk Status
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                    Geotechnical coverage across Arunachal Pradesh, Assam, Manipur, Meghalaya, Mizoram, Nagaland, Sikkim, and Tripura
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigateTo('/map')}
+                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                >
+                  <span>Open Full Interactive Map →</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {STATE_SUMMARIES.map((st) => (
+                  <div
+                    key={st.state}
+                    onClick={() => navigateTo('/map')}
+                    className="group rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/50 p-4 transition-all cursor-pointer shadow-md"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-extrabold text-base text-white group-hover:text-blue-300">{st.state}</h3>
+                      <RiskBadge level={st.critical > 0 ? 'CRITICAL' : st.high > 0 ? 'HIGH' : 'MODERATE'} size="sm" />
+                    </div>
+                    <div className="space-y-1 text-xs text-slate-300 mt-3">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Peak Risk Index:</span>
+                        <span className="font-mono font-bold text-amber-300">{st.peakRisk}/100</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Critical/High:</span>
+                        <span className="font-mono font-bold text-red-400">{st.critical + st.high} zones</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-800 text-[11px] text-slate-400 truncate">
+                      <span className="font-semibold text-slate-300">Hazard: </span>{st.alert}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 2. CITIZEN DASHBOARD & SIMULATION
+      // ==========================================
+      function CitizenDashboard() {
+        const {
+          activeZone,
+          setActiveZone,
+          allZones,
+          simulatedRainfall,
+          setSimulatedRainfall,
+          dynamicRiskScore,
+          dynamicRiskLevel,
+          dynamicSoilMoisture,
+          dynamicGroundDisplacement,
+          dynamicTrigger,
+          locationStatus,
+          locationMessage,
+          requestUserLocation,
+          userCoords,
+          isEscalating,
+          escalationStep,
+          runEscalationDemo,
+          stopEscalationDemo,
+          navigateTo,
+          setShowSafeAreasModal,
+        } = useSimulation();
+
+        // Theme colors
+        const theme = {
+          CRITICAL: { border: 'border-red-600', ring: 'stroke-red-500', text: 'text-red-400' },
+          HIGH: { border: 'border-orange-500', ring: 'stroke-orange-500', text: 'text-orange-400' },
+          MODERATE: { border: 'border-amber-500', ring: 'stroke-amber-400', text: 'text-amber-400' },
+          LOW: { border: 'border-emerald-500', ring: 'stroke-emerald-400', text: 'text-emerald-400' },
+        }[dynamicRiskLevel];
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-24 bg-[#0B132B] text-slate-100">
+            <div className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+              {/* Top Title */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+                <div>
+                  <div className="flex items-center space-x-2 text-xs text-blue-400 font-semibold mb-1">
+                    <span className="cursor-pointer hover:underline" onClick={() => navigateTo('/')}>Home</span>
+                    <span>/</span>
+                    <span className="text-slate-400">Citizen Risk Monitoring</span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+                    <span>📊</span> Citizen Landslide Risk Monitor
+                  </h1>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowSafeAreasModal(true)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold"
+                  >
+                    🏛️ Safe Shelters
+                  </button>
+                  <button
+                    onClick={() => navigateTo('/report')}
+                    className="px-3 py-1.5 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 text-xs font-bold"
+                  >
+                    🚨 Report Hazard
+                  </button>
+                </div>
+              </div>
+
+              {/* 1. Location Bar */}
+              <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-bold text-slate-200">Your Current Location</span>
+                    {locationStatus === 'granted' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">● GPS ACTIVE</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700">DEMO LOCATION</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400">{locationMessage}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={requestUserLocation}
+                    disabled={locationStatus === 'loading'}
+                    className="flex items-center space-x-1 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md"
+                  >
+                    <span>📍</span>
+                    <span>{locationStatus === 'loading' ? 'Locating...' : 'Use My Location'}</span>
+                  </button>
+                  <select
+                    value={activeZone.id}
+                    onChange={(e) => {
+                      const found = allZones.find(z => z.id === e.target.value);
+                      if (found) {
+                        setActiveZone(found);
+                        setSimulatedRainfall(found.rainfall24h);
+                      }
+                    }}
+                    className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 outline-none cursor-pointer"
+                  >
+                    {allZones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.state}: {z.name.split(' (')[0]} ({z.riskLevel})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 2. CURRENT RISK CARD */}
+              <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border-2 ${theme.border} p-5 sm:p-6 shadow-2xl transition-all`}>
+                <div className="absolute top-2 right-3 text-[10px] font-mono uppercase text-slate-500/60">
+                  Simulated prototype data
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+                  <div>
+                    <span className="text-xs font-black uppercase text-slate-400">CURRENT LANDSLIDE RISK</span>
+                    <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5 flex items-center gap-2">
+                      <span>Monitoring Zone:</span>
+                      <span className="text-blue-300">{activeZone.name.split(' (')[0]}</span>
+                    </h2>
+                    <p className="text-xs text-slate-400">{activeZone.district}, {activeZone.state} • Elev: {activeZone.elevation}m</p>
+                  </div>
+                  <RiskBadge level={dynamicRiskLevel} size="lg" showPulse />
+                </div>
+
+                <div className="my-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div className="md:col-span-5 flex items-center justify-center">
+                    <div className="relative flex h-36 w-36 items-center justify-center">
+                      <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
+                        <circle className="stroke-slate-800" strokeWidth="10" fill="transparent" r="40" cx="50" cy="50" />
+                        <circle
+                          className={`${theme.ring} transition-all duration-700 ease-out`}
+                          strokeWidth="10"
+                          strokeDasharray={251.2}
+                          strokeDashoffset={251.2 - (251.2 * dynamicRiskScore) / 100}
+                          strokeLinecap="round"
+                          fill="transparent"
+                          r="40"
+                          cx="50"
+                          cy="50"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center justify-center text-center">
+                        <span className="text-3xl font-black text-white tracking-tight">{dynamicRiskScore}</span>
+                        <span className="text-[11px] font-bold uppercase text-slate-400">/ 100</span>
+                        <span className="text-[10px] font-semibold text-slate-400">Risk Score</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-7 space-y-3">
+                    <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-3 flex items-center justify-between">
+                      <span className="text-xs text-slate-300">Status Trend:</span>
+                      <div className="flex items-center space-x-1.5 text-xs font-bold font-mono">
+                        <span className="text-slate-400">{activeZone.previousRiskLevel}</span>
+                        <span className="text-slate-500">→</span>
+                        <span className={theme.text}>{dynamicRiskLevel}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-300">
+                      <span className="font-semibold text-white">Expected Hazard Window: </span>
+                      <span className="font-medium text-amber-300">{activeZone.expectedRiskWindow}</span>
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      <span className="font-semibold text-slate-300">Lithology / Strata: </span>
+                      {activeZone.soilType}
+                    </div>
+                    <button
+                      onClick={() => navigateTo('/map')}
+                      className="text-xs font-semibold text-blue-400 hover:text-blue-300 inline-flex items-center gap-1"
+                    >
+                      <span>View this zone on 8-state map →</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 Telemetry Readouts */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-4 border-t border-slate-800/80">
+                  <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-3">
+                    <div className="text-slate-400 text-xs mb-1">🌧️ Rain (24h)</div>
+                    <div className="text-lg font-black text-white font-mono">{simulatedRainfall} mm</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Threshold: 120 mm</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-3">
+                    <div className="text-slate-400 text-xs mb-1">💧 Soil Moisture</div>
+                    <div className="text-lg font-black text-white font-mono">{dynamicSoilMoisture}%</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Saturation Level</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-3">
+                    <div className="text-slate-400 text-xs mb-1">⛰️ Slope Angle</div>
+                    <div className="text-lg font-black text-white font-mono">{activeZone.slope}°</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">DEM Incline</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-900/80 border border-slate-800 p-3">
+                    <div className="text-slate-400 text-xs mb-1">📡 Ground Movement</div>
+                    <div className="text-lg font-black text-white font-mono">{dynamicGroundDisplacement} mm</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Inclinometer Creep</div>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 rounded-xl bg-slate-900/80 border border-slate-800 p-3">
+                    <div className="text-slate-400 text-xs mb-1">🌡️ Temperature</div>
+                    <div className="text-lg font-black text-white font-mono">{activeZone.temperature}°C</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">AWS Weather Station</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. LIVE RISK SIMULATION (SIH Presentation Feature) */}
+              <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/40 to-slate-900 border-2 border-indigo-500/40 p-5 sm:p-6 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-lg">🧪</span>
+                      <h3 className="text-lg font-black text-white uppercase">LIVE RISK SIMULATION</h3>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-400/40">
+                        SIH PRESENTATION
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">
+                      Adjust simulated rainfall to demonstrate real-time risk escalation and early warning alerts.
+                    </p>
+                  </div>
+                  <RiskBadge level={dynamicRiskLevel} size="md" showPulse />
+                </div>
+
+                <div className="mt-4 p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-bold text-sm text-white">Automated Presentation Sequence</span>
+                      {isEscalating && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950 text-red-300 border border-red-700 animate-pulse">
+                          ● ESCALATION RUNNING
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {isEscalating ? escalationStep : 'Sequentially simulates LOW → MODERATE → HIGH → CRITICAL then triggers emergency warning.'}
+                    </p>
+                  </div>
+                  {isEscalating ? (
+                    <button onClick={stopEscalationDemo} className="px-4 py-2 rounded-xl bg-red-700 text-white font-bold text-xs">
+                      ⏹ Stop
+                    </button>
+                  ) : (
+                    <button
+                      onClick={runEscalationDemo}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-orange-600/30"
+                    >
+                      ▶ Run Risk Escalation Demo
+                    </button>
+                  )}
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs sm:text-sm font-bold text-slate-200">
+                      🌧️ Simulated Rainfall: <span className="font-mono text-blue-400 text-base font-black">{simulatedRainfall} mm</span>
+                    </label>
+                    <div className="text-xs text-slate-400 font-mono">
+                      Score: <span className="font-bold text-white">{dynamicRiskScore}/100</span> | Moisture: <span className="font-bold text-white">{dynamicSoilMoisture}%</span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="20"
+                    max="220"
+                    step="5"
+                    value={simulatedRainfall}
+                    onChange={(e) => setSimulatedRainfall(Number(e.target.value))}
+                    disabled={isEscalating}
+                    className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+
+                  {/* Presets */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                    {[
+                      { r: 40, lvl: 'LOW', label: '40 mm (LOW)' },
+                      { r: 80, lvl: 'MODERATE', label: '80 mm (MODERATE)' },
+                      { r: 120, lvl: 'HIGH', label: '120 mm (HIGH)' },
+                      { r: 180, lvl: 'CRITICAL', label: '160+ mm (CRITICAL)' },
+                    ].map((p) => (
+                      <button
+                        key={p.r}
+                        onClick={() => setSimulatedRainfall(p.r)}
+                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                          Math.abs(simulatedRainfall - p.r) < 15
+                            ? 'bg-blue-600/30 border-blue-400 text-white'
+                            : 'bg-slate-800/60 border-slate-700 text-slate-300'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span>{p.label}</span>
+                          <RiskBadge level={p.lvl} size="sm" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. RISK EXPLANATION */}
+              <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-6 shadow-xl space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                      <span>🔍</span> Why is the risk {dynamicRiskLevel.toLowerCase()}?
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                      {dynamicRiskLevel === 'CRITICAL' || dynamicRiskLevel === 'HIGH'
+                        ? `Risk has increased because of heavy cumulative rainfall (${simulatedRainfall}mm), elevated soil moisture (${dynamicSoilMoisture}%) and steep terrain in ${activeZone.name.split(' (')[0]}.`
+                        : `Baseline physical measurements in ${activeZone.name.split(' (')[0]} remain within stable envelope, though continuous rainfall is monitored.`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigateTo('/ai-assistant')}
+                    className="flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs sm:text-sm shadow-md shrink-0"
+                  >
+                    <span>🤖 Ask NER AI</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-4 space-y-1">
+                    <span className="font-bold text-sm text-white">🌧️ Heavy Rainfall</span>
+                    <p className="text-xs text-slate-400">24h Precipitation: {simulatedRainfall} mm. Raises pore pressure along bedrock interface.</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-4 space-y-1">
+                    <span className="font-bold text-sm text-white">💧 High Soil Moisture</span>
+                    <p className="text-xs text-slate-400">Saturation: {dynamicSoilMoisture}%. High water content degrades cohesion between soil grains.</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-4 space-y-1">
+                    <span className="font-bold text-sm text-white">⛰️ Steep Slope</span>
+                    <p className="text-xs text-slate-400">Gradient: {activeZone.slope}°. High incline produces significant gravitational shear stress.</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-800/80 border border-slate-700 p-4 space-y-1">
+                    <span className="font-bold text-sm text-white">📡 Ground Movement</span>
+                    <p className="text-xs text-slate-400">Displacement: {dynamicGroundDisplacement} mm. In-place inclinometers detect sub-surface creep.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 3. INTERACTIVE RISK MAP
+      // ==========================================
+      function RiskMap() {
+        const { allZones, activeZone, setActiveZone, userCoords, navigateTo, setShowSafeAreasModal } = useSimulation();
+        const mapRef = useRef(null);
+        const mapInst = useRef(null);
+        const [selectedZone, setSelectedZone] = useState(activeZone);
+        const [filterLvl, setFilterLvl] = useState('ALL');
+        const [isPanelOpen, setIsPanelOpen] = useState(true);
+
+        const filtered = allZones.filter((z) => filterLvl === 'ALL' || z.riskLevel === filterLvl);
+
+        useEffect(() => {
+          if (!mapRef.current || typeof L === 'undefined' || mapInst.current) return;
+
+          const map = L.map(mapRef.current, {
+            center: [25.9, 92.8],
+            zoom: 7,
+            minZoom: 6,
+            maxZoom: 14,
+          });
+
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            maxZoom: 19,
+          }).addTo(map);
+
+          mapInst.current = map;
+        }, []);
+
+        useEffect(() => {
+          const map = mapInst.current;
+          if (!map || typeof L === 'undefined') return;
+
+          // Clear previous markers
+          map.eachLayer((layer) => {
+            if (layer instanceof L.CircleMarker || (layer instanceof L.Marker && layer.options.icon?.options?.className === 'custom-user-marker')) {
+              map.removeLayer(layer);
+            }
+          });
+
+          if (userCoords) {
+            const userIcon = L.divIcon({
+              className: 'custom-user-marker',
+              html: `<div style="background-color: #2563EB; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(37,99,235,0.8);"></div>`,
+              iconSize: [16, 16],
+            });
+            L.marker(userCoords, { icon: userIcon }).bindPopup('📍 Your Current Location').addTo(map);
+          }
+
+          filtered.forEach((zone) => {
+            const color = {
+              CRITICAL: '#EF4444',
+              HIGH: '#F97316',
+              MODERATE: '#F59E0B',
+              LOW: '#10B981',
+            }[zone.riskLevel];
+
+            const marker = L.circleMarker(zone.coordinates, {
+              radius: zone.riskLevel === 'CRITICAL' ? 14 : zone.riskLevel === 'HIGH' ? 11 : 9,
+              fillColor: color,
+              color: '#FFFFFF',
+              weight: 2,
+              opacity: 0.9,
+              fillOpacity: 0.85,
+            });
+
+            marker.bindTooltip(`<strong>${zone.name.split(' (')[0]}</strong><br/>${zone.riskLevel} (${zone.riskScore}/100)`);
+            marker.on('click', () => {
+              setSelectedZone(zone);
+              setActiveZone(zone);
+              setIsPanelOpen(true);
+              map.panTo(zone.coordinates, { animate: true });
+            });
+
+            marker.addTo(map);
+          });
+        }, [filtered, userCoords, setActiveZone]);
+
+        return (
+          <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden bg-slate-950 text-slate-100">
+            {/* Top filter bar */}
+            <div className="absolute top-3 left-3 z-20 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-700 p-3 shadow-xl max-w-sm">
+              <h2 className="text-xs font-black text-white flex items-center gap-1.5 mb-2">
+                <span>🗺️</span> Northeast Landslide Risk Map
+              </h2>
+              <div className="flex flex-wrap gap-1">
+                {['ALL', 'CRITICAL', 'HIGH', 'MODERATE', 'LOW'].map((lvl) => (
+                  <button
+                    key={lvl}
+                    onClick={() => setFilterLvl(lvl)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                      filterLvl === lvl ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Map Container */}
+            <div ref={mapRef} className="h-full w-full z-10" />
+
+            {/* Legend */}
+            <div className="absolute bottom-20 sm:bottom-4 left-3 z-20 rounded-xl bg-slate-900/90 border border-slate-800 p-3 shadow-lg text-xs space-y-1 hidden xs:block">
+              <div className="font-bold text-slate-300 text-[10px] uppercase mb-1">Risk Legend</div>
+              <div className="flex items-center space-x-2"><span className="h-2.5 w-2.5 rounded-full bg-red-500"></span><span>Critical (85-100)</span></div>
+              <div className="flex items-center space-x-2"><span className="h-2.5 w-2.5 rounded-full bg-orange-500"></span><span>High (65-84)</span></div>
+              <div className="flex items-center space-x-2"><span className="h-2.5 w-2.5 rounded-full bg-amber-400"></span><span>Moderate (35-64)</span></div>
+              <div className="flex items-center space-x-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400"></span><span>Low (0-34)</span></div>
+            </div>
+
+            {/* Slide-over Detail Panel */}
+            {selectedZone && isPanelOpen && (
+              <div className="absolute top-0 right-0 bottom-0 z-30 w-full sm:w-96 bg-slate-900/95 backdrop-blur-lg border-l border-slate-800 p-5 shadow-2xl overflow-y-auto">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                  <span className="font-mono text-xs text-blue-400 font-bold">{selectedZone.code} • {selectedZone.state}</span>
+                  <button onClick={() => setIsPanelOpen(false)} className="h-7 w-7 rounded-lg bg-slate-800 text-slate-300 text-xs font-bold">✕</button>
+                </div>
+                <h3 className="text-lg font-black text-white leading-snug">{selectedZone.name}</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{selectedZone.district} • Elev: {selectedZone.elevation}m</p>
+
+                <div className="my-4 rounded-xl bg-slate-800/80 border border-slate-700 p-3.5 flex items-center justify-between">
+                  <RiskBadge level={selectedZone.riskLevel} size="md" showPulse />
+                  <span className="text-xl font-black text-white font-mono">{selectedZone.riskScore}/100</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+                  <div className="rounded-lg bg-slate-800/60 p-2.5"><span className="text-slate-400 block text-[10px]">🌧️ Rain (24h)</span><span className="font-bold text-white font-mono">{selectedZone.rainfall24h} mm</span></div>
+                  <div className="rounded-lg bg-slate-800/60 p-2.5"><span className="text-slate-400 block text-[10px]">💧 Soil Moisture</span><span className="font-bold text-white font-mono">{selectedZone.soilMoisture}%</span></div>
+                  <div className="rounded-lg bg-slate-800/60 p-2.5"><span className="text-slate-400 block text-[10px]">⛰️ Slope</span><span className="font-bold text-white font-mono">{selectedZone.slope}°</span></div>
+                  <div className="rounded-lg bg-slate-800/60 p-2.5"><span className="text-slate-400 block text-[10px]">📡 Movement</span><span className="font-bold text-white font-mono">{selectedZone.groundDisplacement} mm</span></div>
+                </div>
+
+                <div className="rounded-lg bg-slate-800/60 p-3 text-xs mb-3">
+                  <span className="font-bold text-slate-300 block text-[11px]">Main Trigger:</span>
+                  <p className="text-slate-300 mt-0.5 leading-relaxed">{selectedZone.primaryTrigger}</p>
+                </div>
+
+                <div className="rounded-lg bg-slate-800/60 p-3 text-xs mb-4">
+                  <span className="font-bold text-slate-300 block text-[11px]">Expected Risk Window:</span>
+                  <p className="text-amber-300 font-semibold">{selectedZone.expectedRiskWindow}</p>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <button
+                    onClick={() => { setActiveZone(selectedZone); navigateTo('/dashboard'); }}
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-xs text-white"
+                  >
+                    Open in Citizen Dashboard
+                  </button>
+                  <button
+                    onClick={() => { setActiveZone(selectedZone); setShowSafeAreasModal(true); }}
+                    className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold text-xs text-slate-300"
+                  >
+                    View Safe Shelters ({selectedZone.safeEvacuationAreas.length})
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 4. AI ASSISTANT
+      // ==========================================
+      function AIAssistant() {
+        const { activeZone, simulatedRainfall, dynamicRiskScore, dynamicRiskLevel, navigateTo } = useSimulation();
+        const [messages, setMessages] = useState([
+          {
+            id: '1',
+            sender: 'assistant',
+            text: `Hello! I am the **NER Landslide AI Assistant**.\n\nI monitor geomechanical slope stability and precipitation thresholds across Northeast India.\n\nActive Context: **${activeZone.name}** (${dynamicRiskLevel} Risk • Score ${dynamicRiskScore}/100).\n\nHow can I help you?`
+          }
+        ]);
+        const [input, setInput] = useState('');
+        const [isTyping, setIsTyping] = useState(false);
+        const endRef = useRef(null);
+
+        const handleSend = (text) => {
+          const q = (text || input).trim();
+          if (!q) return;
+
+          setMessages((prev) => [...prev, { id: Date.now().toString(), sender: 'user', text: q }]);
+          setInput('');
+          setIsTyping(true);
+
+          setTimeout(() => {
+            let reply = '';
+            const qLower = q.toLowerCase();
+
+            if (qLower.includes('why') && (qLower.includes('risk') || qLower.includes('high') || qLower.includes('critical'))) {
+              reply = `${activeZone.name} is currently evaluated at **${dynamicRiskLevel} Risk (Score: ${dynamicRiskScore}/100)** in this prototype.\n\nKey triggers:\n• 24h Rainfall: ${simulatedRainfall} mm\n• Soil Moisture: ${activeZone.soilMoisture}%\n• Terrain Slope: ${activeZone.slope}° (${activeZone.soilType})\n• Ground Movement: ${activeZone.groundDisplacement} mm\n\nTrigger Note: ${activeZone.primaryTrigger}.`;
+            } else if (qLower.includes('which areas') || qLower.includes('critical') || qLower.includes('most dangerous')) {
+              reply = `Currently in this prototype, the following zones exhibit **CRITICAL** risk:\n\n• **Cherrapunji (Sohra) Escarpment** (Meghalaya) - 215mm rain\n• **Haflong Railway Section** (Assam) - 178mm rain\n• **Noney Tupul Corridor** (Manipur) - 195mm rain, 18.3mm movement\n• **Mangan Slide Zone** (Sikkim) - 184mm rain`;
+            } else if (qLower.includes('factor') || qLower.includes('trigger')) {
+              reply = `The four primary factors evaluated by the NER AI model are:\n\n1. **Rainfall Accumulation:** Cumulative water volume driving pore pressure.\n2. **Soil Moisture Saturation:** Loss of soil shear strength upon saturation.\n3. **Slope Gradient:** Steepness accelerating gravitational shear stress.\n4. **Inclinometer Displacement:** Active sub-surface deformation.`;
+            } else if (qLower.includes('what should i do') || qLower.includes('safety') || qLower.includes('warning')) {
+              reply = `Action Guide for ${dynamicRiskLevel} Alert in ${activeZone.name}:\n\n1. Avoid valley bottoms and steep cut-slopes.\n2. Prepare an emergency Go-Bag with documents and water.\n3. Check designated shelters (e.g. ${activeZone.safeEvacuationAreas[0]?.name || 'Local Community Hall'}).\n4. Follow instructions from local SDMA/SDRF teams. Toll-free helpline: **1070** or **1078**.`;
+            } else {
+              reply = `Regarding **${activeZone.name}**:\nCurrent status is **${dynamicRiskLevel}** (Score: ${dynamicRiskScore}/100) with ${simulatedRainfall}mm simulated rainfall and ${activeZone.soilMoisture}% moisture.\n\nAll AI responses are synthesized directly from prototype telemetry.`;
+            }
+
+            setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), sender: 'assistant', text: reply }]);
+            setIsTyping(false);
+          }, 500);
+        };
+
+        useEffect(() => {
+          endRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, [messages, isTyping]);
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-24 bg-[#0B132B] text-slate-100 flex flex-col">
+            <div className="mx-auto w-full max-w-4xl px-3 sm:px-6 lg:px-8 py-4 flex-1 flex flex-col">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                    <span>🤖</span> NER AI Assistant
+                  </h1>
+                  <p className="text-xs text-slate-400">Ask about current landslide risk, triggers, and safety instructions.</p>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700/50 text-[11px] font-mono text-indigo-300">
+                  {activeZone.name.split(' (')[0]}
+                </span>
+              </div>
+
+              <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-2.5 mb-3 text-xs text-slate-400">
+                ℹ️ <strong>Prototype Notice:</strong> AI responses are generated from simulated prototype data.
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 p-4 rounded-2xl bg-slate-900/60 border border-slate-800 min-h-[380px] max-h-[55vh]">
+                {messages.map((m) => (
+                  <div key={m.id} className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {m.sender === 'assistant' && <div className="h-8 w-8 rounded-lg bg-indigo-600/30 flex items-center justify-center shrink-0">🤖</div>}
+                    <div className={`max-w-[85%] rounded-2xl p-3.5 text-xs sm:text-sm leading-relaxed ${m.sender === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'}`}>
+                      <div className="whitespace-pre-line">{m.text}</div>
+                    </div>
+                  </div>
+                ))}
+                {isTyping && <div className="text-xs text-slate-400 font-mono animate-pulse">AI analyzing telemetry...</div>}
+                <div ref={endRef} />
+              </div>
+
+              <div className="mt-3">
+                <span className="text-[11px] font-semibold text-slate-400 block mb-1">Suggested Questions:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'Why is my area at high risk?',
+                    'Which areas are currently critical?',
+                    'What factors are increasing the risk?',
+                    'What should I do during a high-risk warning?'
+                  ].map((q) => (
+                    <button key={q} onClick={() => handleSend(q)} className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700">
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="mt-3 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={`Ask about ${activeZone.name.split(' (')[0]}...`}
+                  className="flex-1 rounded-xl bg-slate-900 border border-slate-700 px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+                <button type="submit" className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md">
+                  Send
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 5. CITIZEN HAZARD REPORTING
+      // ==========================================
+      function HazardReportForm() {
+        const { activeZone, submitReport, navigateTo, userCoords, requestUserLocation } = useSimulation();
+        const [hazardType, setHazardType] = useState('Road Crack');
+        const [locationName, setLocationName] = useState(activeZone.name.split(' (')[0]);
+        const [description, setDescription] = useState('');
+        const [reporterName, setReporterName] = useState('');
+        const [submitted, setSubmitted] = useState(false);
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          if (!description.trim()) return;
+
+          await submitReport({
+            hazardType,
+            locationName,
+            coordinates: userCoords || activeZone.coordinates,
+            description,
+            reporterName: reporterName.trim() || 'Citizen',
+            severity: hazardType === 'Landslide' || hazardType === 'Rockfall' ? 'CRITICAL' : 'HIGH'
+          });
+          setSubmitted(true);
+        };
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-24 bg-[#0B132B] text-slate-100">
+            <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8 py-6">
+              <div className="border-b border-slate-800 pb-4 mb-6">
+                <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+                  <span>🚨</span> Report a Landslide Hazard
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">Submit geotagged observations to assist disaster response teams.</p>
+              </div>
+
+              {submitted ? (
+                <div className="rounded-2xl bg-slate-900 border-2 border-emerald-500 p-6 sm:p-8 text-center space-y-4 shadow-2xl">
+                  <div className="text-4xl">✅</div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white">Report Submitted</h2>
+                  <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto">
+                    Your report has been forwarded to the monitoring dashboard and saved to local storage.
+                  </p>
+                  <div className="flex justify-center gap-3 pt-3">
+                    <button onClick={() => { setSubmitted(false); setDescription(''); }} className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs">
+                      Submit Another
+                    </button>
+                    <button onClick={() => navigateTo('/authority')} className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-200 font-semibold text-xs">
+                      View in Authority Dashboard →
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 sm:p-7 shadow-xl space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">1. Hazard Type *</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {['Landslide', 'Road Crack', 'Rockfall', 'Mudflow', 'Road Blockage', 'Other'].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setHazardType(t)}
+                          className={`p-3 rounded-xl border text-xs font-bold text-left ${hazardType === t ? 'bg-blue-600/30 border-blue-500 text-blue-300' : 'bg-slate-800/60 border-slate-700 text-slate-300'}`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">2. Location *</label>
+                      <button type="button" onClick={requestUserLocation} className="text-xs font-semibold text-blue-400">📍 Use GPS</button>
+                    </div>
+                    <input
+                      type="text"
+                      value={locationName}
+                      onChange={(e) => setLocationName(e.target.value)}
+                      required
+                      className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-2.5 text-xs text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">3. Description *</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      required
+                      placeholder="e.g. I noticed cracks developing along the roadside..."
+                      className="w-full rounded-xl bg-slate-800 border border-slate-700 p-3.5 text-xs text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">4. Your Name (Optional)</label>
+                    <input
+                      type="text"
+                      value={reporterName}
+                      onChange={(e) => setReporterName(e.target.value)}
+                      placeholder="e.g. Citizen Reporter"
+                      className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-2.5 text-xs text-white"
+                    />
+                  </div>
+
+                  <button type="submit" className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 font-black text-sm text-white shadow-lg">
+                    Submit Hazard Report
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 6. AUTHORITY DASHBOARD
+      // ==========================================
+      function AuthorityDashboard() {
+        const { allZones, activeZone, setActiveZone, activeAlerts, citizenReports, updateReportStatus, simulatedRainfall, setSimulatedRainfall, dynamicRiskScore, dynamicRiskLevel, dynamicSoilMoisture, dynamicGroundDisplacement } = useSimulation();
+        const [filterLvl, setFilterLvl] = useState('ALL');
+        const [timeRange, setTimeRange] = useState('24h');
+
+        const seriesHours = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'Now'];
+        const sampleRainfall = [30, 45, 70, 95, 120, 135, simulatedRainfall];
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-24 bg-[#070D1E] text-slate-100">
+            <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="h-3 w-3 rounded-full bg-red-500 animate-ping"></span>
+                    <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
+                      NER LANDSLIDE MONITORING CENTER
+                    </h1>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Disaster Operations Control Room • Northeast Regional Hub</p>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-700 self-start sm:self-auto">
+                  ● SYSTEMS OPERATIONAL
+                </span>
+              </div>
+
+              {/* 5 Top Statistics Cards (Requirement #12) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 block">Monitored Zones</span>
+                  <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-1">67</div>
+                  <span className="text-[10px] text-emerald-400">8 NE States</span>
+                </div>
+                <div className="rounded-2xl bg-red-950/40 border border-red-800 p-4">
+                  <span className="text-[11px] font-bold uppercase text-red-300 block">Critical</span>
+                  <div className="text-2xl sm:text-3xl font-black text-red-400 font-mono mt-1">7</div>
+                  <span className="text-[10px] text-red-300">Imminent Danger</span>
+                </div>
+                <div className="rounded-2xl bg-orange-950/40 border border-orange-800 p-4">
+                  <span className="text-[11px] font-bold uppercase text-orange-300 block">High Risk</span>
+                  <div className="text-2xl sm:text-3xl font-black text-orange-400 font-mono mt-1">18</div>
+                  <span className="text-[10px] text-orange-300">Precautionary</span>
+                </div>
+                <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-4">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 block">Active Alerts</span>
+                  <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono mt-1">5</div>
+                  <span className="text-[10px] text-amber-300">Broadcasted</span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 rounded-2xl bg-slate-900/90 border border-slate-800 p-4">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 block">Citizen Reports</span>
+                  <div className="text-2xl sm:text-3xl font-black text-blue-400 font-mono mt-1">{24 + citizenReports.length - 3}</div>
+                  <span className="text-[10px] text-blue-300">Crowdsourced</span>
+                </div>
+              </div>
+
+              {/* Authority Demo Mode Simulator (Requirement #27) */}
+              <div className="rounded-2xl bg-gradient-to-br from-indigo-950/60 to-slate-900 border-2 border-indigo-500/50 p-5 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-ping"></span>
+                    <h3 className="text-sm font-black text-white uppercase">DEMO MODE • Environmental Condition Simulator</h3>
+                  </div>
+                  <RiskBadge level={dynamicRiskLevel} size="md" showPulse />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-slate-400 font-semibold">🌧️ Rainfall Infiltration: {simulatedRainfall} mm</span>
+                    <input
+                      type="range"
+                      min="20"
+                      max="220"
+                      value={simulatedRainfall}
+                      onChange={(e) => setSimulatedRainfall(Number(e.target.value))}
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                    />
+                  </div>
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-slate-400 font-semibold">💧 Soil Moisture: {dynamicSoilMoisture}%</span>
+                    <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-teal-500" style={{ width: `${dynamicSoilMoisture}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 space-y-1">
+                    <span className="text-slate-400 font-semibold">📡 Ground Movement: {dynamicGroundDisplacement} mm</span>
+                    <div className="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-500" style={{ width: `${Math.min(100, dynamicGroundDisplacement * 5)}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Column Grid: Alerts & Environmental Telemetry */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Active Alerts (Requirement #14) */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>📢</span> ACTIVE ALERTS
+                      </h3>
+                      <span className="text-xs font-mono text-slate-400">{activeAlerts.length} Broadcasted</span>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                      {activeAlerts.map((alt) => (
+                        <div
+                          key={alt.id}
+                          onClick={() => {
+                            const z = allZones.find(x => x.id === alt.zoneId);
+                            if (z) setActiveZone(z);
+                          }}
+                          className="rounded-xl p-3.5 bg-slate-800/60 border border-slate-700 hover:border-blue-500 cursor-pointer transition-all"
+                        >
+                          <div className="flex justify-between items-start">
+                            <span className="font-bold text-xs text-white">{alt.headline}</span>
+                          </div>
+                          <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">{alt.description}</p>
+                          <div className="mt-2 text-[10px] text-slate-400 font-mono">Issued: {alt.issuedAt} • Pop: ~{alt.affectedPopulation.toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Monitored Zones Matrix */}
+                  <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                      <h3 className="text-sm font-bold text-white">Monitoring Registry</h3>
+                      <div className="flex gap-1 text-[10px]">
+                        {['ALL', 'CRITICAL', 'HIGH'].map((l) => (
+                          <button
+                            key={l}
+                            onClick={() => setFilterLvl(l)}
+                            className={`px-2 py-0.5 rounded font-bold ${filterLvl === l ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 text-xs">
+                      {allZones.filter(z => filterLvl === 'ALL' || z.riskLevel === filterLvl).slice(0, 7).map((z) => (
+                        <div
+                          key={z.id}
+                          onClick={() => setActiveZone(z)}
+                          className="p-2 rounded-lg bg-slate-800/50 border border-slate-700 flex justify-between items-center cursor-pointer hover:bg-slate-800"
+                        >
+                          <div>
+                            <span className="font-bold text-slate-200">{z.name.split(' (')[0]}</span>
+                            <span className="text-[10px] text-slate-400 block">{z.state} • {z.rainfall24h}mm rain</span>
+                          </div>
+                          <RiskBadge level={z.riskLevel} size="sm" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: Telemetry Charts & Reports */}
+                <div className="lg:col-span-7 space-y-6">
+                  {/* Environmental Monitoring Charts (Requirement #16) */}
+                  <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-xl space-y-4">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <span>📈</span> Environmental Telemetry Time-Series
+                        </h3>
+                        <p className="text-xs text-slate-400">Station: {activeZone.name.split(' (')[0]}</p>
+                      </div>
+                      <div className="flex gap-1 bg-slate-800 p-1 rounded-lg text-xs">
+                        {['24h', '7d', '30d'].map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => setTimeRange(r)}
+                            className={`px-2 py-1 rounded font-bold ${timeRange === r ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+                          >
+                            {r.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Rainfall Chart */}
+                      <div className="rounded-xl bg-slate-800/60 p-3.5 border border-slate-700 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold text-white">🌧️ Rainfall (mm)</span>
+                          <span className="font-mono text-blue-400 font-bold">{simulatedRainfall} mm</span>
+                        </div>
+                        <div className="h-28 flex items-end justify-between gap-1 pt-3 pb-1 border-b border-slate-700">
+                          {sampleRainfall.map((val, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                              <div
+                                className="w-full bg-blue-500 rounded-t transition-all"
+                                style={{ height: `${Math.max(10, Math.min(100, (val / 200) * 100))}%` }}
+                              />
+                              <span className="text-[9px] text-slate-400 mt-1">{seriesHours[i]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Soil Moisture Chart */}
+                      <div className="rounded-xl bg-slate-800/60 p-3.5 border border-slate-700 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold text-white">💧 Soil Moisture (%)</span>
+                          <span className="font-mono text-teal-400 font-bold">{dynamicSoilMoisture}%</span>
+                        </div>
+                        <div className="h-28 flex items-end justify-between gap-1 pt-3 pb-1 border-b border-slate-700">
+                          {[55, 62, 68, 74, 79, 81, dynamicSoilMoisture].map((val, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                              <div
+                                className="w-full bg-teal-500 rounded-t transition-all"
+                                style={{ height: `${val}%` }}
+                              />
+                              <span className="text-[9px] text-slate-400 mt-1">{seriesHours[i]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Movement Chart */}
+                      <div className="rounded-xl bg-slate-800/60 p-3.5 border border-slate-700 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold text-white">📡 Ground Movement (mm)</span>
+                          <span className="font-mono text-orange-400 font-bold">{dynamicGroundDisplacement} mm</span>
+                        </div>
+                        <div className="h-28 flex items-end justify-between gap-1 pt-3 pb-1 border-b border-slate-700">
+                          {[1.2, 1.8, 2.5, 3.8, 5.2, 6.4, dynamicGroundDisplacement].map((val, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                              <div
+                                className="w-full bg-orange-500 rounded-t transition-all"
+                                style={{ height: `${Math.min(100, val * 6)}%` }}
+                              />
+                              <span className="text-[9px] text-slate-400 mt-1">{seriesHours[i]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Risk Score Chart */}
+                      <div className="rounded-xl bg-slate-800/60 p-3.5 border border-slate-700 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-bold text-white">⚡ Landslide Risk Index</span>
+                          <span className="font-mono text-red-400 font-bold">{dynamicRiskScore}/100</span>
+                        </div>
+                        <div className="h-28 flex items-end justify-between gap-1 pt-3 pb-1 border-b border-slate-700">
+                          {[38, 44, 55, 64, 72, 78, dynamicRiskScore].map((val, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                              <div
+                                className={`w-full rounded-t transition-all ${val >= 85 ? 'bg-red-500' : val >= 65 ? 'bg-orange-500' : 'bg-emerald-500'}`}
+                                style={{ height: `${val}%` }}
+                              />
+                              <span className="text-[9px] text-slate-400 mt-1">{seriesHours[i]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Citizen Reports Review Queue (Requirement #15) */}
+                  <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 shadow-xl space-y-3">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>🚨</span> Citizen Hazard Reports Queue ({citizenReports.length})
+                      </h3>
+                    </div>
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {citizenReports.map((rep) => (
+                        <div key={rep.id} className="p-3 rounded-xl bg-slate-800/70 border border-slate-700 text-xs space-y-1.5">
+                          <div className="flex justify-between items-start">
+                            <span className="font-bold text-white">{rep.hazardType} — {rep.locationName}</span>
+                            <select
+                              value={rep.status}
+                              onChange={(e) => updateReportStatus(rep.id, e.target.value)}
+                              className="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] rounded px-2 py-1 outline-none font-bold"
+                            >
+                              <option value="New">New</option>
+                              <option value="Under Review">Under Review</option>
+                              <option value="Verified">Verified</option>
+                              <option value="Resolved">Resolved</option>
+                            </select>
+                          </div>
+                          <p className="text-slate-300">"{rep.description}"</p>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            AI note: {rep.aiAssessment} • Status: <strong className="text-amber-300">{rep.status}</strong>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // 7. SAFETY GUIDE & HELPLINES
+      // ==========================================
+      function SafetyGuide() {
+        const [tab, setTab] = useState('protocols');
+
+        return (
+          <div className="min-h-[calc(100vh-4rem)] pb-24 bg-[#0B132B] text-slate-100">
+            <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+              <div className="border-b border-slate-800 pb-4">
+                <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+                  <span>🛡️</span> Landslide Safety Guide
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">Official disaster preparedness guidelines according to NDMA and GSI protocols.</p>
+              </div>
+
+              <div className="flex border-b border-slate-800">
+                <button
+                  onClick={() => setTab('protocols')}
+                  className={`py-2 px-4 text-xs font-bold border-b-2 ${tab === 'protocols' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400'}`}
+                >
+                  Safety Protocols
+                </button>
+                <button
+                  onClick={() => setTab('contacts')}
+                  className={`py-2 px-4 text-xs font-bold border-b-2 ${tab === 'contacts' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400'}`}
+                >
+                  8 NE State Helplines
+                </button>
+              </div>
+
+              {tab === 'protocols' ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl bg-slate-900/90 border border-slate-800 p-5 space-y-2">
+                    <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-1.5">🟢 Before a Landslide</h3>
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-5">
+                      <li>Monitor official warnings from local disaster management authorities.</li>
+                      <li>Avoid building or residing on steep cut-slopes during heavy continuous rainfall.</li>
+                      <li>Know your community evacuation routes and nearest designated emergency shelters.</li>
+                      <li>Keep emergency kits ready (torches, radios, first-aid, potable water).</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-900/90 border border-orange-800 p-5 space-y-2">
+                    <h3 className="text-sm font-bold text-orange-400 flex items-center gap-1.5">🟠 During a Landslide</h3>
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-5">
+                      <li>Move away from the slide path quickly across the slope, not downhill.</li>
+                      <li>Avoid crossing swollen hill streams and muddy debris flows.</li>
+                      <li>Follow official evacuation instructions issued by district magistrates and SDRF teams.</li>
+                      <li>Stay away from cracked roads and unstable highway shoulders.</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-900/90 border border-red-800 p-5 space-y-2">
+                    <h3 className="text-sm font-bold text-red-400 flex items-center gap-1.5">🔴 After a Landslide</h3>
+                    <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-5">
+                      <li>Avoid unstable debris fields and watch for secondary slide triggers.</li>
+                      <li>Report new road cracks and hazards using this application.</li>
+                      <li>Do not enter damaged structures until certified safe by civil authorities.</li>
+                      <li>Follow authority instructions and emergency broadcast advisories.</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {EMERGENCY_CONTACTS.map((c, idx) => (
+                      <div key={idx} className="rounded-xl bg-slate-900/80 border border-slate-800 p-3.5 space-y-1 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-white">{c.state}</span>
+                          <span className="font-mono text-emerald-400 font-bold">{c.helpline}</span>
+                        </div>
+                        <p className="text-slate-400 text-[11px]">{c.authority}</p>
+                        <p className="text-slate-500 font-mono text-[10px]">Landline: {c.alt}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // ==========================================
+      // ROOT APP ROUTER
+      // ==========================================
+      function AppContent() {
+        const { currentRoute } = useSimulation();
+
+        const renderView = () => {
+          switch (currentRoute) {
+            case '/dashboard': return <CitizenDashboard />;
+            case '/map': return <RiskMap />;
+            case '/ai-assistant': return <AIAssistant />;
+            case '/report': return <HazardReportForm />;
+            case '/authority': return <AuthorityDashboard />;
+            case '/safety': return <SafetyGuide />;
+            case '/':
+            default:
+              return <LandingPage />;
+          }
+        };
+
+        return (
+          <div className="flex min-h-screen flex-col bg-[#0B132B] font-sans antialiased text-slate-100">
+            <Header />
+            <EmergencyBanner />
+            <main className="flex-1 w-full">{renderView()}</main>
+            <Navigation />
+          </div>
+        );
+      }
+
+      function App() {
+        return (
+          <SimulationProvider>
+            <AppContent />
+          </SimulationProvider>
+        );
+      }
+
+      // Render App to DOM
+      const rootElement = document.getElementById('root');
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(<App />);
+    </script>
+  </body>
+</html>
